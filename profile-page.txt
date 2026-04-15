@@ -2,4 +2,4 @@ User Profile Page requirements:
 
 Display user information
 Allow editing profile
-Validate input fields
+Validate input field
