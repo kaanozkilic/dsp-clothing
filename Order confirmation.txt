@@ -1,0 +1,4 @@
+Order confirmation requirements:
+
+Display purchased items and final price
+Generate order confirmation ID
