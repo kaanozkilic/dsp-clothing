@@ -1,56 +1,35 @@
-name: Label & comment issues #the name of the workflow
-on: # This action will trigger when an issue is reopened or opened.
-  issues:
-    types:
-      - reopened
-      - opened
-      - closed
-  pull_request_target:
-    types:
-      - opened
-jobs: # The jobs that run in this workflow
-  label_issues: # the first job is named as label_issues
-    if: github.event_name == 'issues' && github.event.action != 'closed'
-    runs-on: ubuntu-latest # This job will run on the latest version of Ubuntu.
-    permissions: # This job requires write access to issues in order to add labels and comment.
-      issues: write
-    steps: # The "steps" section contains the individual tasks that will be performed in this job.
-      - name: attach label to issues # The name of the step
-        uses: actions/github-script@v6 # This step uses the "actions/github-script" action to execute a script that adds labels to the issue.
-        with:
-          script: | # The script calls the GitHub REST API to add labels to the issue.
-            github.rest.issues.addLabels({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              labels: ["issue", "fix"]
-            })
-      - name: Comment on new issue #this is another step that comments on the issue 
-        uses: peter-evans/create-or-update-comment@v1 # This step uses the "peter-evans/create-or-update-comment" action to create or update a comment on the issue.
-        with:
-          issue-number: ${{ github.event.issue.number }} # The issue number is obtained from the context of the event that triggered the action.
-          body: | # The body of the comment is a message thanking the user for opening the issue.
-           Thanks for opening this issue! We'll take a look as soon as possible.
-  # Comment on when an issue is closed
-  closed_issue:
-    if: github.event_name == 'issues' && github.event.action == 'closed'
+name: Build and Deploy Docker App to Azure
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    permissions:
-      issues: write
+
     steps:
-      - uses: peter-evans/create-or-update-comment@v1
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to Azure Container Registry
+        uses: docker/login-action@v3
         with:
-          issue-number: ${{ github.event.issue.number }}
-          body: |
-            issue is nomore more.
-  # Comment on when a user opens the first pull request 
-  first_pr:
-    if: github.event_name == 'pull_request_target'
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-    steps:
-      - uses: actions/first-interaction@v1
+          registry: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/dsp-clothing:latest .
+
+      - name: Push Docker image to Azure Container Registry
+        run: |
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/dsp-clothing:latest
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
         with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          pr-message: "congratulatoins on your first PR"
+          app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
+          images: ${{ secrets.ACR_LOGIN_SERVER }}/dsp-clothing:latest
