@@ -11,7 +11,7 @@ app.get("/", (req, res) => {
 
         <h2>Team Members</h2>
         <ul>
-          <li>Shuvo Singha</li>
+          <li>Shuvojyoti Singha</li>
         </ul>
       </body>
     </html>
